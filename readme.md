@@ -1,4 +1,5 @@
-<<<<<<< HEAD
+
+
 # NeuroSim — Brain Network Control Pipeline
 
 **GSoC 2026 — NBRC / EBRAINS Project #39**
