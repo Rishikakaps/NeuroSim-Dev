@@ -1,0 +1,48 @@
+
+============================================================
+  FINDING 1: Alcohol Use Disorder (AUD)
+============================================================
+
+1.1 Average Controllability in Prefrontal/DMN nodes (0-4):
+    Controls: 1.5588
+    AUD:      1.5313
+    Change:   -1.8%
+
+1.2 Mean Control Energy (all nodes):
+    Controls: 0.7246
+    AUD:      0.7445
+    Change:   +2.7%
+
+1.3 Normative Deviation (z-scores):
+    Mean |z| for AC in DMN: 0.42
+
+============================================================
+  FINDING 2: Epilepsy
+============================================================
+
+2.1 Modal Controllability in Seizure Focus (nodes 5-7):
+    Controls:  0.8560
+    Epilepsy:  1.6212
+    Change:    +89.4%
+    → SIGNIFICANT ELEVATION: Epilepsy shows increased MC in focus.
+    → Hyper-excitable nodes can push network into high-energy modes.
+    → Consistent with ictal propagation dynamics.
+
+2.2 Average Controllability in Seizure Focus:
+    Controls:  2.0204
+    Epilepsy:  1.8174
+    Change:    -10.0%
+
+2.3 Normative Deviation (z-scores):
+    Mean z for MC in focus: +5.51
+    → Epilepsy patients show POSITIVE z-scores in focus (elevated MC).
+
+============================================================
+  FINDING 3: Group Comparison Summary
+============================================================
+
+    Metric                    Control      AUD        Epilepsy
+    -------------------------------------------------------
+    AverageControllability        1.6127     1.5665      2.1927
+    ModalControllability          0.8073     0.8305      0.7525
+    MinControlEnergy              0.7246     0.7445      0.6646
