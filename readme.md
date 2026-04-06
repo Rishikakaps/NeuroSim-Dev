@@ -26,22 +26,12 @@ This is a **working prototype pipeline**, not just theory.
 
 ## 🧠 Pipeline Overview
 
-data/roi_timeseries/
-        │
-        ▼
-generate_synthetic.py # (optional) create test data
-        │
-        ▼
-compute_EC.py # timeseries → directed A matrix
-        │
-        ▼
-compute_NCT.py # A → controllability metrics
-        │
-        ▼
-compute_zscores.py # compare vs controls
-        │
-        ▼
-visualize.py # plots + heatmaps
+1. data/roi_timeseries/
+2. generate_synthetic.py # (optional) create test data
+3. compute_EC.py # timeseries → directed A matrix
+4. compute_NCT.py # A → controllability metrics
+5. compute_zscores.py # compare vs controls
+6. visualize.py # plots + heatmaps
 
 
 Run everything:
@@ -69,9 +59,9 @@ from src.compute_EC import load_timeseries, fit_var1_ols
 X = load_timeseries("data/roi_timeseries/patient_1.csv")
 A = fit_var1_ols(X)
 ``` 
-Learns causal relationships between brain regions
-Produces asymmetric A matrix
-Automatically normalized for stability
+- Learns causal relationships between brain regions
+- Produces asymmetric A matrix
+- Automatically normalized for stability
 
 ```python 
 2. Compute Control Metrics
@@ -81,9 +71,9 @@ W = compute_gramian(A)
 mc = modal_controllability(A)
 ```
 Outputs:
-AC → easy-to-reach states
-MC → hard-to-reach states
-Energy → cost of transitions
+- AC → easy-to-reach states
+- MC → hard-to-reach states
+- Energy → cost of transitions
 
 ```python 
 3. Compare Against Controls
@@ -91,44 +81,49 @@ from src.compute_zscores import compute_zscores
 
 zscores = compute_zscores(patient_data, control_data)
 ```
-Highlights abnormal regions per subject
-Produces per-ROI deviation maps
+- Highlights abnormal regions per subject
+- Produces per-ROI deviation maps
 
 ---
 
 ## 📁 Outputs
+``` bash
 outputs/
 ├── EC/          # directed A matrices
 ├── NCT/         # AC, MC, Energy
 ├── zscores/     # patient vs control deviations
 └── figures/     # heatmaps + plots
-
+```
 ---
 
 ## 🧪 Testing
 ```bash 
 pytest tests/ -v
-``` 
-🔬 Validation (Synthetic)
-Generates synthetic VAR(1) data
-Simulates network degradation (e.g. reduced coupling)
+```
+--- 
+
+## 🔬 Validation (Synthetic)
+- Generates synthetic VAR(1) data
+- Simulates network degradation (e.g. reduced coupling)
 Verifies:
-A matrix recovery
-sensitivity of NCT metrics
+- A matrix recovery
+- sensitivity of NCT metrics
 
 ---
 
 ## ⚡ Key Design Choices
-Uses directed connectivity (A) instead of symmetric FC
-Ensures system stability (spectral radius < 1)
-Keeps pipeline modular and reproducible
+- Uses directed connectivity (A) instead of symmetric FC
+- Ensures system stability (spectral radius < 1)
+- Keeps pipeline modular and reproducible
 
 ---
 
 ## 📦 Installation
+```bash 
 git clone https://github.com/Rishikakaps/NeuroSim.git
 cd NeuroSim
 pip install -r requirements.txt
+```
 
 ---
 
@@ -141,10 +136,10 @@ pip install -r requirements.txt
 ---
 
 ## 🧭 Roadmap
-BIDS dataset ingestion
-Multi-site harmonization
-Real clinical datasets (AD, AUD, Epilepsy)
-Improved normative modeling
+- BIDS dataset ingestion
+- Multi-site harmonization
+- Real clinical datasets (AD, AUD, Epilepsy)
+- Improved normative modeling
 
 ---
 ## References 
@@ -153,6 +148,7 @@ Improved normative modeling
 3. Karrer, T.M., et al. (2020). A practical guide to methodological considerations in the controllability of structural brain networks. *Journal of Neural Engineering*, 17(2).
 4. Parkes, L., et al. (2024). A network control theory pipeline for studying the dynamics of the structural connectome. *Nature Protocols*.
 
-5. --- 
+--- 
+
 ## 👩‍💻 Author
 Rishika Kapil
