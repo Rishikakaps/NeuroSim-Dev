@@ -1,0 +1,10 @@
+subject,metric,mean_abs_z,n_anomalous_rois
+patient_1,AverageControllability,1.2951849301585343,3
+patient_1,ModalControllability,1.6338926076198583,4
+patient_1,MinControlEnergy,1.0812030043975656,3
+patient_2,AverageControllability,1.7158899068836049,5
+patient_2,ModalControllability,3.816852116942267,11
+patient_2,MinControlEnergy,1.1142513273070813,3
+patient_3,AverageControllability,1.6339851855475465,5
+patient_3,ModalControllability,2.983880860378292,8
+patient_3,MinControlEnergy,1.2044645227058763,4
