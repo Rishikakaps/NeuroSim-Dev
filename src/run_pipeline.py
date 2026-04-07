@@ -390,11 +390,16 @@ def main():
             'Epilepsy Subject 1',
             'outputs/figures/EC_heatmap_epilepsy_1.png')
 
-        # NCT metric comparisons (all groups)
+        # NCT metric comparisons (separate groups for clarity)
         for metric in METRICS:
+            # Controls vs AUD
             visualize.plot_metric_comparison(
                 'outputs/NCT', 'outputs/figures',
-                CONTROL_IDS, AUD_IDS + EPILEPSY_IDS, metric)
+                CONTROL_IDS, AUD_IDS, metric)
+            # Controls vs Epilepsy
+            visualize.plot_metric_comparison(
+                'outputs/NCT', 'outputs/figures',
+                CONTROL_IDS, EPILEPSY_IDS, metric)
 
         # Z-score heatmaps
         for metric in METRICS:

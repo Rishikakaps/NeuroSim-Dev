@@ -22,7 +22,7 @@ import os
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from compute_NCT import (
+from neurosim.src.compute_NCT import (
     compute_gramian,
     average_controllability,
     modal_controllability,
