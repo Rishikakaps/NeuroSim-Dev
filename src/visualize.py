@@ -81,10 +81,16 @@ def plot_ec_heatmap(ec_path, title, out_path):
 # --------------------------------------------------------------------------
 # Figure 2 & 3: Controllability metric bar charts (controls vs patients)
 # --------------------------------------------------------------------------
-def plot_metric_comparison(nct_dir, output_dir, control_ids, patient_ids, metric):
+def plot_metric_comparison(nct_dir, output_dir, control_ids, patient_ids, metric, patient_label=None):
     """
     Grouped bar chart: controls (blue) vs patients (red) for each ROI.
     Shows where the groups diverge — these ROIs are your candidate biomarkers.
+
+    Parameters
+    ----------
+    patient_label : str, optional
+        Label for patient group (e.g., 'AUD', 'Epilepsy').
+        If None, defaults to 'Patients'. Used in title and filename.
     """
     def load(subj_ids):
         arrays = []
@@ -99,13 +105,17 @@ def plot_metric_comparison(nct_dir, output_dir, control_ids, patient_ids, metric
     x = np.arange(N)
     width = 0.35
 
+    # Determine label for title and filename
+    group_label = patient_label if patient_label else 'Patients'
+    fig_label = patient_label.replace(' ', '_') if patient_label else 'patients'
+
     fig, ax = plt.subplots(figsize=(12, 4))
 
     bars_c = ax.bar(x - width/2, ctrl.mean(axis=0), width,
                     label=f'Controls (n={len(control_ids)})',
                     color=COLORS['control'], alpha=0.85)
     bars_p = ax.bar(x + width/2, pat.mean(axis=0), width,
-                    label=f'Patients (n={len(patient_ids)})',
+                    label=f'{group_label} (n={len(patient_ids)})',
                     color=COLORS['patient'], alpha=0.85)
 
     # Error bars (std across subjects)
@@ -116,14 +126,14 @@ def plot_metric_comparison(nct_dir, output_dir, control_ids, patient_ids, metric
 
     ax.set_xlabel('ROI Index')
     ax.set_ylabel(METRICS_LABELS.get(metric, metric))
-    ax.set_title(f'{METRICS_LABELS.get(metric, metric)}: Controls vs Patients',
+    ax.set_title(f'{METRICS_LABELS.get(metric, metric)}: Controls vs {group_label}',
                  fontweight='bold')
     ax.set_xticks(x)
     ax.legend()
     ax.grid(axis='y', alpha=0.3)
 
     plt.tight_layout()
-    out_path = os.path.join(output_dir, f'{metric}_comparison.png')
+    out_path = os.path.join(output_dir, f'{metric}_{fig_label}_comparison.png')
     plt.savefig(out_path, bbox_inches='tight')
     plt.close()
     print(f"Saved: {out_path}")

@@ -151,9 +151,12 @@ def sanity_checks():
         'outputs/figures/EC_heatmap_control_1.png',
         'outputs/figures/EC_heatmap_aud_1.png',
         'outputs/figures/EC_heatmap_epilepsy_1.png',
-        'outputs/figures/AverageControllability_comparison.png',
-        'outputs/figures/ModalControllability_comparison.png',
-        'outputs/figures/MinControlEnergy_comparison.png',
+        'outputs/figures/AverageControllability_AUD_comparison.png',
+        'outputs/figures/AverageControllability_Epilepsy_comparison.png',
+        'outputs/figures/ModalControllability_AUD_comparison.png',
+        'outputs/figures/ModalControllability_Epilepsy_comparison.png',
+        'outputs/figures/MinControlEnergy_AUD_comparison.png',
+        'outputs/figures/MinControlEnergy_Epilepsy_comparison.png',
         'outputs/figures/zscore_AverageControllability_heatmap.png',
         'outputs/figures/zscore_ModalControllability_heatmap.png',
         'outputs/figures/zscore_summary_barplot.png',
@@ -395,11 +398,11 @@ def main():
             # Controls vs AUD
             visualize.plot_metric_comparison(
                 'outputs/NCT', 'outputs/figures',
-                CONTROL_IDS, AUD_IDS, metric)
+                CONTROL_IDS, AUD_IDS, metric, patient_label='AUD')
             # Controls vs Epilepsy
             visualize.plot_metric_comparison(
                 'outputs/NCT', 'outputs/figures',
-                CONTROL_IDS, EPILEPSY_IDS, metric)
+                CONTROL_IDS, EPILEPSY_IDS, metric, patient_label='Epilepsy')
 
         # Z-score heatmaps
         for metric in METRICS:
