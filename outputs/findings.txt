@@ -5,16 +5,16 @@
 
 1.1 Average Controllability in Prefrontal/DMN nodes (0-4):
     Controls: 1.5588
-    AUD:      1.5313
-    Change:   -1.8%
+    AUD:      2.7458
+    Change:   +76.1%
 
 1.2 Mean Control Energy (all nodes):
     Controls: 0.7246
-    AUD:      0.7445
-    Change:   +2.7%
+    AUD:      0.6092
+    Change:   -15.9%
 
 1.3 Normative Deviation (z-scores):
-    Mean |z| for AC in DMN: 0.42
+    Mean |z| for AC in DMN: 11.30
 
 ============================================================
   FINDING 2: Epilepsy
@@ -38,11 +38,23 @@
     → Epilepsy patients show POSITIVE z-scores in focus (elevated MC).
 
 ============================================================
-  FINDING 3: Group Comparison Summary
+  FINDING 3: Alzheimer's Disease (AD)
 ============================================================
 
-    Metric                    Control      AUD        Epilepsy
-    -------------------------------------------------------
-    AverageControllability        1.6127     1.5665      2.1927
-    ModalControllability          0.8073     0.8305      0.7525
-    MinControlEnergy              0.7246     0.7445      0.6646
+3.1 Average Controllability in DMN nodes (0-4):
+    Controls: 1.5588
+    AD:       1.5509
+    Change:   -0.5%
+
+3.2 Normative Deviation (z-scores):
+    Mean z for AC in DMN: -0.29
+
+============================================================
+  FINDING 4: Group Comparison Summary
+============================================================
+
+    Metric                    Control      AUD        Epilepsy       AD
+    ----------------------------------------------------------------------
+    AverageControllability        1.6127     3.0163      2.1927      1.5809
+    ModalControllability          0.8073     0.7119      0.7525      0.8254
+    MinControlEnergy              0.7246     0.6092      0.6646      0.7390

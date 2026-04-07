@@ -47,7 +47,8 @@ CONTROL_IDS = [f'control_{i}' for i in range(1, 6)]
 # Patient groups
 AUD_IDS = [f'aud_{i}' for i in range(1, 6)]
 EPILEPSY_IDS = [f'epilepsy_{i}' for i in range(1, 6)]
-ALL_PATIENT_IDS = AUD_IDS + EPILEPSY_IDS
+AD_IDS = [f'ad_{i}' for i in range(1, 6)]
+ALL_PATIENT_IDS = AUD_IDS + EPILEPSY_IDS + AD_IDS
 ALL_IDS = CONTROL_IDS + ALL_PATIENT_IDS
 
 # ROI groupings for interpretable findings
@@ -151,12 +152,16 @@ def sanity_checks():
         'outputs/figures/EC_heatmap_control_1.png',
         'outputs/figures/EC_heatmap_aud_1.png',
         'outputs/figures/EC_heatmap_epilepsy_1.png',
+        'outputs/figures/EC_heatmap_ad_1.png',
         'outputs/figures/AverageControllability_AUD_comparison.png',
         'outputs/figures/AverageControllability_Epilepsy_comparison.png',
+        'outputs/figures/AverageControllability_AD_comparison.png',
         'outputs/figures/ModalControllability_AUD_comparison.png',
         'outputs/figures/ModalControllability_Epilepsy_comparison.png',
+        'outputs/figures/ModalControllability_AD_comparison.png',
         'outputs/figures/MinControlEnergy_AUD_comparison.png',
         'outputs/figures/MinControlEnergy_Epilepsy_comparison.png',
+        'outputs/figures/MinControlEnergy_AD_comparison.png',
         'outputs/figures/zscore_AverageControllability_heatmap.png',
         'outputs/figures/zscore_ModalControllability_heatmap.png',
         'outputs/figures/zscore_summary_barplot.png',
@@ -206,21 +211,28 @@ def print_interpretable_findings():
     control_stats = compute_group_statistics('outputs/NCT', CONTROL_IDS)
     aud_stats = compute_group_statistics('outputs/NCT', AUD_IDS)
     epilepsy_stats = compute_group_statistics('outputs/NCT', EPILEPSY_IDS)
+    ad_stats = compute_group_statistics('outputs/NCT', AD_IDS)
 
     # Load z-scores
     aud_zscores = {}
     epilepsy_zscores = {}
+    ad_zscores = {}
     for metric in METRICS:
         aud_z = []
         epi_z = []
+        ad_z = []
         for pid in AUD_IDS:
             df = pd.read_csv(f'outputs/zscores/{pid}_zscores.csv')
             aud_z.append(df[f'{metric}_zscore'].values)
         for pid in EPILEPSY_IDS:
             df = pd.read_csv(f'outputs/zscores/{pid}_zscores.csv')
             epi_z.append(df[f'{metric}_zscore'].values)
+        for pid in AD_IDS:
+            df = pd.read_csv(f'outputs/zscores/{pid}_zscores.csv')
+            ad_z.append(df[f'{metric}_zscore'].values)
         aud_zscores[metric] = np.array(aud_z)  # (n_aud, n_rois)
         epilepsy_zscores[metric] = np.array(epi_z)  # (n_epilepsy, n_rois)
+        ad_zscores[metric] = np.array(ad_z)  # (n_ad, n_rois)
 
     # -------------------------------------------------------------------------
     # Finding 1: AUD - Reduced prefrontal control
@@ -309,21 +321,52 @@ def print_interpretable_findings():
         findings.append(f"    → Epilepsy patients show POSITIVE z-scores in focus (elevated MC).")
 
     # -------------------------------------------------------------------------
-    # Finding 3: Group comparison summary
+    # Finding 3: Alzheimer's Disease - DMN hub degradation
     # -------------------------------------------------------------------------
     findings.append("\n" + "="*60)
-    findings.append("  FINDING 3: Group Comparison Summary")
+    findings.append("  FINDING 3: Alzheimer's Disease (AD)")
+    findings.append("="*60)
+
+    # Average Controllability in DMN
+    ad_ac_dmn = ad_stats['AverageControllability']['mean'][DMN_NODES].mean()
+    ad_pct_change = (ad_ac_dmn - ctrl_ac_dmn) / ctrl_ac_dmn * 100
+
+    findings.append(f"\n3.1 Average Controllability in DMN nodes (0-4):")
+    findings.append(f"    Controls: {ctrl_ac_dmn:.4f}")
+    findings.append(f"    AD:       {ad_ac_dmn:.4f}")
+    findings.append(f"    Change:   {ad_pct_change:+.1f}%")
+
+    if ad_pct_change < -5:
+        findings.append(f"    → SIGNIFICANT REDUCTION: AD shows decreased AC in DMN.")
+        findings.append(f"    → Consistent with DMN hub degradation in Alzheimer's.")
+        findings.append(f"    → Progressive loss of default mode network integration.")
+
+    # Z-score summary for AD
+    ad_ac_z = ad_zscores['AverageControllability'].mean(axis=0)
+    ad_dmn_z = ad_ac_z[DMN_NODES].mean()
+
+    findings.append(f"\n3.2 Normative Deviation (z-scores):")
+    findings.append(f"    Mean z for AC in DMN: {ad_dmn_z:+.2f}")
+    if ad_dmn_z < -1.5:
+        findings.append(f"    → AD patients show NEGATIVE z-scores in DMN (reduced AC).")
+
+    # -------------------------------------------------------------------------
+    # Finding 4: Group comparison summary
+    # -------------------------------------------------------------------------
+    findings.append("\n" + "="*60)
+    findings.append("  FINDING 4: Group Comparison Summary")
     findings.append("="*60)
 
     # Table of key metrics
-    findings.append("\n    Metric                    Control      AUD        Epilepsy")
-    findings.append("    " + "-"*55)
+    findings.append("\n    Metric                    Control      AUD        Epilepsy       AD")
+    findings.append("    " + "-"*70)
 
     for metric in METRICS:
         ctrl_mean = control_stats[metric]['mean'].mean()
         aud_mean = aud_stats[metric]['mean'].mean()
         epi_mean = epilepsy_stats[metric]['mean'].mean()
-        findings.append(f"    {metric[:25]:<25} {ctrl_mean:>10.4f}  {aud_mean:>9.4f}  {epi_mean:>10.4f}")
+        ad_mean = ad_stats[metric]['mean'].mean()
+        findings.append(f"    {metric[:25]:<25} {ctrl_mean:>10.4f}  {aud_mean:>9.4f}  {epi_mean:>10.4f}  {ad_mean:>10.4f}")
 
     # -------------------------------------------------------------------------
     # Save findings to file
@@ -344,7 +387,7 @@ def main():
     print("  TICSR Conference Paper")
     print("="*60)
     print(f"\nWorking directory: {os.getcwd()}")
-    print(f"Subjects: {len(CONTROL_IDS)} controls, {len(AUD_IDS)} AUD, {len(EPILEPSY_IDS)} epilepsy")
+    print(f"Subjects: {len(CONTROL_IDS)} controls, {len(AUD_IDS)} AUD, {len(EPILEPSY_IDS)} epilepsy, {len(AD_IDS)} AD")
 
     # Step 1: Generate synthetic data
     run_step(
@@ -361,10 +404,11 @@ def main():
 
     # Step 3: Compute NCT metrics
     run_step(
-        "Step 3: Compute NCT Metrics (Gramian, AC, MC, E*)",
-        compute_nct,
-        'outputs/EC', 'outputs/NCT'
-    )
+        "Step 3: ...",
+        compute_nct, 
+        'outputs/EC', 
+        'outputs/NCT', 
+        'data/roi_timeseries')
 
     # Step 4: Compute z-scores (controls as normative reference)
     run_step(
@@ -392,6 +436,10 @@ def main():
             'outputs/EC/epilepsy_1_EC.csv',
             'Epilepsy Subject 1',
             'outputs/figures/EC_heatmap_epilepsy_1.png')
+        visualize.plot_ec_heatmap(
+            'outputs/EC/ad_1_EC.csv',
+            'AD Subject 1',
+            'outputs/figures/EC_heatmap_ad_1.png')
 
         # NCT metric comparisons (separate groups for clarity)
         for metric in METRICS:
@@ -403,6 +451,10 @@ def main():
             visualize.plot_metric_comparison(
                 'outputs/NCT', 'outputs/figures',
                 CONTROL_IDS, EPILEPSY_IDS, metric, patient_label='Epilepsy')
+            # Controls vs AD
+            visualize.plot_metric_comparison(
+                'outputs/NCT', 'outputs/figures',
+                CONTROL_IDS, AD_IDS, metric, patient_label='AD')
 
         # Z-score heatmaps
         for metric in METRICS:

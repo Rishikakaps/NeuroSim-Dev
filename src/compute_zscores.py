@@ -30,12 +30,7 @@ def load_nct(nct_dir, subject_id):
 
 
 def compute_normative_reference(control_ids, nct_dir):
-    """
-    Build per-ROI normative statistics from control subjects.
-    Returns: norms dict → metric → {'mean': array, 'std': array}
-    """
     all_data = {m: [] for m in METRICS}
-
     for cid in control_ids:
         data = load_nct(nct_dir, cid)
         for m in METRICS:
@@ -43,28 +38,22 @@ def compute_normative_reference(control_ids, nct_dir):
 
     norms = {}
     for m in METRICS:
-        arr = np.array(all_data[m])  # (n_controls, N)
+        arr = np.array(all_data[m])          # (n_controls, N)
         mean = arr.mean(axis=0)
-        std = arr.std(axis=0)
+        std = arr.std(axis=0, ddof=1)        # Bessel-corrected, unbiased
 
-        # Std floor: use 5% of the mean as a minimum, not just an absolute epsilon.
-        # With only 2 controls, some ROIs will have near-zero std by chance —
-        # tiny std produces astronomically large z-scores that are not meaningful.
-        # A relative floor (5% of mean magnitude) is more honest and interpretable.
-        # LIMITATION: n_controls=2 gives std with 1 degree of freedom.
-        # z-scores are illustrative only. Real normative modeling requires n≥50 controls.
-        # See PCNtoolkit for the correct implementation (de Boer et al., 2025).
-        std_floor = 0.05 * np.abs(mean) + 1e-8  # 5% of mean + absolute safety
-        n_floored = np.sum(std < std_floor)
-        if n_floored > 0:
-            print(f"  ⚠ {m}: {n_floored} ROIs have std below 5%-of-mean floor. "
-                  f"Applying floor (this is expected with n_controls=2).")
-        std = np.maximum(std, std_floor)
+        # Flag unreliable ROIs (std too small relative to mean)
+        flag = std < 0.02 * np.abs(mean) + 1e-8
+        std_safe = std.copy()
+        std_safe[flag] = 0.02 * np.abs(mean[flag]) + 1e-8
 
-        norms[m] = {'mean': mean, 'std': std}
+        n_flagged = flag.sum()
+        if n_flagged > 0:
+            print(f"  ⚠ {m}: {n_flagged} ROIs flagged as unreliable (std too small).")
+
+        norms[m] = {'mean': mean, 'std': std_safe, 'flag': flag}
         print(f"  {m}: mean range=[{mean.min():.4f}, {mean.max():.4f}]  "
-              f"std range=[{std.min():.4f}, {std.max():.4f}]")
-
+              f"std range=[{std_safe.min():.4f}, {std_safe.max():.4f}]")
     return norms
 
 
@@ -82,33 +71,30 @@ def save_normative_reference(norms, output_dir):
 
 def compute_patient_zscores(patient_ids, control_ids, nct_dir, output_dir):
     os.makedirs(output_dir, exist_ok=True)
-
-    print("Computing normative reference from controls...")
     norms = compute_normative_reference(control_ids, nct_dir)
     save_normative_reference(norms, output_dir)
 
-    print("\nComputing patient z-scores...")
     summary_rows = []
-
     for pid in patient_ids:
-        print(f"\n── {pid} ──────────────────────────────")
         data = load_nct(nct_dir, pid)
-
         n_rois = len(data[METRICS[0]])
         z_df = pd.DataFrame({'ROI': np.arange(n_rois)})
 
         for m in METRICS:
             z = (data[m] - norms[m]['mean']) / norms[m]['std']
-            z_df[f'{m}_zscore'] = z
+            flag = norms[m]['flag']
+            z[flag] = np.nan               # mark unreliable as NaN
 
-            # Summarize: how many ROIs are "anomalous" (|z| > 2)?
-            n_anomalous = np.sum(np.abs(z) > 2)
-            mean_abs_z = np.mean(np.abs(z))
-            print(f"  {m}: mean|z|={mean_abs_z:.4f}  ROIs with |z|>2: {n_anomalous}/{n_rois}")
+            z_df[f'{m}_zscore'] = z
+            z_df[f'{m}_flag'] = flag.astype(int)
+
+            reliable = ~flag
+            n_anomalous = np.sum(np.abs(z[reliable]) > 2)
+            mean_abs_z = np.nanmean(np.abs(z))
+            print(f"  {m}: mean|z|={mean_abs_z:.4f}  ROIs with |z|>2 (reliable only): {n_anomalous}/{reliable.sum()}")
 
             summary_rows.append({
-                'subject': pid,
-                'metric': m,
+                'subject': pid, 'metric': m,
                 'mean_abs_z': mean_abs_z,
                 'n_anomalous_rois': n_anomalous
             })
@@ -117,11 +103,8 @@ def compute_patient_zscores(patient_ids, control_ids, nct_dir, output_dir):
         z_df.to_csv(out_path, index=False)
         print(f"  ✓ Saved: {out_path}")
 
-    # Save summary table — useful for the paper's results section
     summary_df = pd.DataFrame(summary_rows)
-    summary_path = os.path.join(output_dir, 'zscore_summary.csv')
-    summary_df.to_csv(summary_path, index=False)
-    print(f"\nSummary table saved: {summary_path}")
+    summary_df.to_csv(os.path.join(output_dir, 'zscore_summary.csv'), index=False)
     print(summary_df.to_string(index=False))
 
 

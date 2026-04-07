@@ -1,7 +1,7 @@
 """
 generate_synthetic.py
 =====================
-Generates realistic synthetic ROI timeseries for three groups:
+Generates realistic synthetic ROI timeseries for four groups:
 
 1. Healthy Controls (n=5)
    - Stable VAR(1) system with balanced connectivity
@@ -19,6 +19,12 @@ Generates realistic synthetic ROI timeseries for three groups:
    - Strong localized outgoing connectivity from focus
    - Burst-like dynamics in timeseries
    - Elevated modal controllability in focus nodes
+
+4. Alzheimer's Disease (n=5)
+   - 40% reduction in outgoing connectivity from DMN nodes 0-4
+   - Progressive hub degradation
+   - Lowered spectral radius (~0.65)
+   - Reduced network integration capacity
 
 Each dataset outputs:
   - ROI timeseries (T x N CSV files)
@@ -51,6 +57,7 @@ VISUAL = [11, 12, 13, 14]         # Visual cortex
 N_CONTROLS = 5
 N_AUD = 5
 N_EPILEPSY = 5
+N_AD = 5
 
 
 def make_stable_A(n, noise_scale=0.05, target_rho=0.7, seed=None):
@@ -171,8 +178,7 @@ def make_AUD_A(control_A, seed):
 
     # Ensure stability
     rho = np.max(np.abs(np.linalg.eigvals(A)))
-    if rho >= 1.0:
-        A = A * (0.75 / rho)
+    A = A * (0.90 / rho)
 
     return A
 
@@ -212,6 +218,34 @@ def make_Epilepsy_A(control_A, seed):
     rho = np.max(np.abs(np.linalg.eigvals(A)))
     if rho >= 1.0:
         A = A * (0.80 / rho)
+
+    return A
+
+
+def make_AD_A(control_A, seed):
+    """
+    Generate Alzheimer's Disease connectivity matrix.
+
+    Simulated pathology:
+    - 40% reduction in outgoing connectivity from DMN nodes 0-4
+      → Progressive hub degradation in default mode network
+    - Lowered spectral radius (~0.65 vs 0.70)
+      → Reduced network integration capacity
+
+    References:
+    - DMN connectivity loss in AD (Buckner et al., 2005)
+    - Hub degradation in Alzheimer's (Stam et al., 2009)
+    """
+    np.random.seed(seed)
+    A = control_A.copy()
+
+    # Reduce DMN outgoing connectivity by 40% (hub degradation)
+    for dmn_node in DMN_NODES:
+        A[dmn_node, :] *= 0.60  # 40% reduction
+
+    # Scale to target spectral radius ~0.65
+    rho = np.max(np.abs(np.linalg.eigvals(A)))
+    A = A * (0.65 / rho)
 
     return A
 
@@ -310,17 +344,34 @@ def main():
               f"timeseries mean={X.mean():.4f}, std={X.std():.4f}")
 
     # -------------------------------------------------------------------------
+    # Generate Alzheimer's Disease subjects
+    # -------------------------------------------------------------------------
+    print(f"\n── Alzheimer's Disease (n={N_AD}) ───────────────────────────────")
+    for i in range(1, N_AD + 1):
+        A_AD = make_AD_A(A_control_template, seed=500 + i)
+
+        X = generate_timeseries(A_AD, T, noise_std=0.10)
+        path = f'data/roi_timeseries/ad_{i}.csv'
+        np.savetxt(path, X, delimiter=',')
+
+        np.savetxt(f'data/ground_truth/A_ad_{i}.csv', A_AD, delimiter=',')
+
+        print(f"  ad_{i}: rho={np.max(np.abs(np.linalg.eigvals(A_AD))):.4f}, "
+              f"timeseries mean={X.mean():.4f}, std={X.std():.4f}")
+
+    # -------------------------------------------------------------------------
     # Summary
     # -------------------------------------------------------------------------
     print("\n" + "=" * 60)
     print("  SYNTHETIC DATA GENERATION COMPLETE")
     print("=" * 60)
     print(f"\nOutputs:")
-    print(f"  Timeseries: data/roi_timeseries/ ({N_CONTROLS + N_AUD + N_EPILEPSY} files)")
-    print(f"  Ground truth A: data/ground_truth/ ({N_CONTROLS + N_AUD + N_EPILEPSY + 1} files)")
+    print(f"  Timeseries: data/roi_timeseries/ ({N_CONTROLS + N_AUD + N_EPILEPSY + N_AD} files)")
+    print(f"  Ground truth A: data/ground_truth/ ({N_CONTROLS + N_AUD + N_EPILEPSY + N_AD + 1} files)")
     print(f"\nExpected findings:")
     print(f"  AUD: Reduced AC in PFC (nodes {DMN_NODES}), higher E*")
     print(f"  Epilepsy: Elevated MC in seizure focus (nodes {SEIZURE_FOCUS})")
+    print(f"  AD: Reduced AC in DMN (nodes {DMN_NODES}), reduced spectral radius")
 
 
 if __name__ == '__main__':
