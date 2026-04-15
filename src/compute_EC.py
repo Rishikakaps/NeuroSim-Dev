@@ -130,5 +130,54 @@ def process_all_subjects(data_dir, output_dir):
     print(f"EC computation complete. {len(files)} files written to {output_dir}/")
 
 
+def causality_vs_fc_audit(A, fc_matrix, parcel_labels=None):
+    """
+    Compare directed EC (A) against symmetric FC to quantify directionality loss.
+
+    Why this matters:
+    - OLS regression on VAR(1) residuals recovers temporal ordering — it estimates
+      A such that x(t) ≈ A x(t-1). This captures directed, causal relationships.
+    - Pearson correlation is symmetric by construction and cannot encode directionality.
+    - Feeding symmetric FC into NCT collapses complex eigenvalues to purely real ones,
+      destroying the causal geometry that controllability metrics depend on.
+
+    Parameters:
+        A: n×n directed connectivity matrix (asymmetric)
+        fc_matrix: n×n functional connectivity matrix (symmetric, Pearson correlation)
+        parcel_labels: optional list of n parcel names for reporting
+
+    Returns:
+        dict with keys:
+            - mean_asymmetry: float, mean(|A - A.T|)
+            - max_divergence_parcel: int, argmax of divergence per node
+            - divergence_matrix: n×n, |A| - fc_matrix
+    """
+    # 1. Asymmetry of EC (directionality measure)
+    asym = np.abs(A - A.T)
+    mean_asymmetry = np.mean(asym)
+
+    # 2. Divergence between EC magnitude and FC
+    divergence = np.abs(np.abs(A) - fc_matrix)
+
+    # 3. Per-node divergence (sum across rows)
+    node_divergence = divergence.sum(axis=1)
+    max_divergence_parcel = int(np.argmax(node_divergence))
+
+    result = {
+        'mean_asymmetry': float(mean_asymmetry),
+        'max_divergence_parcel': max_divergence_parcel,
+        'divergence_matrix': divergence
+    }
+
+    # 4. Report top 10 divergent parcels if labels provided
+    if parcel_labels is not None:
+        top10_idx = np.argsort(node_divergence)[::-1][:10]
+        print("Top 10 parcels where EC and FC diverge most:")
+        for rank, idx in enumerate(top10_idx, 1):
+            print(f"  {rank}. {parcel_labels[idx]} (divergence={node_divergence[idx]:.4f})")
+
+    return result
+
+
 if __name__ == '__main__':
     process_all_subjects('data/roi_timeseries', 'outputs/EC')

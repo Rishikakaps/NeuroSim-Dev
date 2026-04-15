@@ -22,72 +22,81 @@ Metrics:
      → High E* = expensive/hard to reach = potential biomarker for pathology.
 
 The Gramian:
-  Finite-horizon: Wc = Σ_{k=0}^{T-1} A^k (A^k)^T
-  We use B = I (all nodes can be controlled — standard in the literature).
-  T=20 is enough for spectral-radius-normalized A (contributions decay fast).
+  We solve the discrete Lyapunov equation: A @ Wc @ A.T - Wc + I = 0
+  using scipy.linalg.solve_discrete_lyapunov, which is exact and O(n³).
+
+  Why Lyapunov instead of finite-horizon sum?
+  The finite-horizon sum Wc = Σ_{k=0}^{T-1} A^k (A^k)^T converges at rate ρ^(2T),
+  where ρ = spectral_radius(A). At ρ=0.90, T=20 gives ρ^40 ≈ 0.015 residual error
+  — acceptable for healthy controls. But at ρ=0.97 (AUD subjects with rigid
+  attractors), ρ^40 ≈ 0.30 — clinically unacceptable. The Lyapunov solve is
+  exact regardless of ρ, as long as ρ < 1.
 
 Numerical safety:
-  - We check Gramian Frobenius norm is finite at each step.
+  - We verify the Lyapunov residual ||A @ Wc @ A.T - Wc + I||_F < 1e-8.
   - Gramian inversion uses regularization (+ eps*I) to handle ill-conditioning.
-  - MC uses real parts of eigenvalues only (imaginary parts are numerical noise).
+  - MC uses absolute values of complex eigenvalues/eigenvectors.
 """
 
 import numpy as np
 import pandas as pd
 import os
+from scipy.linalg import solve_discrete_lyapunov
 
 
-GRAMIAN_T = 20  # finite-horizon timesteps
-
-
-def compute_gramian(A, T=GRAMIAN_T):
+def compute_gramian(A):
     """
-    Wc = Σ_{k=0}^{T-1} A^k (A^k)^T
-    B = I (identity — all nodes are inputs).
+    Solve the discrete Lyapunov equation: A @ Wc @ A.T - Wc + I = 0
+
+    This is mathematically equivalent to the infinite-horizon sum
+    Wc = Σ_{k=0}^{∞} A^k (A^k)^T, but computed exactly in O(n³) time.
+
+    The finite-horizon approximation with T=20 has residual error scaling
+    as ρ^(2T). For ρ=0.90, this gives ~1.5% error; for ρ=0.97 (rigid
+    attractors in AUD), ~30% error. The Lyapunov solution is exact.
+
+    Returns:
+        Wc: n×n positive definite controllability Gramian
+
+    Raises:
+        RuntimeError: if residual ||A @ Wc @ A.T - Wc + I||_F >= 1e-8
     """
     n = A.shape[0]
-    W = np.zeros((n, n))
-    Ak = np.eye(n)  # A^0 = I
+    Q = np.eye(n)  # Identity matrix for the Lyapunov equation
 
-    for k in range(T):
-        contrib = Ak @ Ak.T
-        W += contrib
+    # Solve: A @ Wc @ A.T - Wc + Q = 0
+    Wc = solve_discrete_lyapunov(A, Q)
 
-        # Numerical guard: if any value explodes, the EC was not properly normalized
-        if not np.isfinite(W).all():
-            raise RuntimeError(
-                f"Gramian became non-finite at k={k}. "
-                "Spectral radius of A must be < 1 before calling this. "
-                "Check compute_EC.py postprocess_A()."
-            )
+    # Verify solution accuracy
+    residual = np.linalg.norm(A @ Wc @ A.T - Wc + np.eye(n), 'fro')
+    if residual >= 1e-8:
+        raise RuntimeError(
+            f"Lyapunov solution failed: residual = {residual:.2e} >= 1e-8. "
+            "This indicates A is not stable (spectral radius >= 1)."
+        )
 
-        Ak = A @ Ak
-
-    frob = np.linalg.norm(W, 'fro')
+    frob = np.linalg.norm(Wc, 'fro')
     print(f"  Gramian Frobenius norm: {frob:.4f}  (should be finite and positive)")
-    return W
+    print(f"  Lyapunov residual: {residual:.2e}  (should be < 1e-8)")
+    return Wc
 
 
-def average_controllability(A, T=GRAMIAN_T):
+def average_controllability(A):
     """
-    AC_i = sum_{k=0}^{T-1} ||col_i(A^k)||^2
+    AC_i = Σ_{k=0}^{∞} ||col_i(A^k)||^2
 
     This measures how much influence node i has across all k-step paths.
     The squared column norm of A^k gives the energy contribution from node i
     at step k; summing over all k gives total controllability.
 
+    We compute this efficiently using the Lyapunov Gramian:
+    AC = diag(Wc) where Wc solves A @ Wc @ A.T - Wc + I = 0
+
     Returns: array of shape (N,) with per-node AC values.
     """
     N = A.shape[0]
-    ac = np.zeros(N)
-    Ak = A.copy()          # ← start at A^1, not np.eye(N)
-    for k in range(1, T): # ← k starts at 1
-        # col_i(A^k) is Ak[:, i]
-        # ||col_i(A^k)||^2 = sum_j (Ak[j, i])^2
-        # np.sum(Ak**2, axis=0) computes this for all i simultaneously
-        ac += np.sum(Ak**2, axis=0)
-        Ak = A @ Ak
-    return ac
+    Wc = compute_gramian(A)
+    return np.diag(Wc)
 
 
 
@@ -158,7 +167,7 @@ def min_control_energy(W, A, x0, N):
     return energy
 
 
-def process_all_subjects(ec_dir, output_dir, ts_dir, T=GRAMIAN_T):
+def process_all_subjects(ec_dir, output_dir, ts_dir):
     os.makedirs(output_dir, exist_ok=True)
     files = sorted([f for f in os.listdir(ec_dir) if f.endswith('_EC.csv')])
     
@@ -176,8 +185,8 @@ def process_all_subjects(ec_dir, output_dir, ts_dir, T=GRAMIAN_T):
         if rho >= 1.0:
             raise RuntimeError(f"EC for {subj} has rho={rho:.4f} >= 1.")
 
-        W = compute_gramian(A, T=T)
-        ac = average_controllability(A, T=T)
+        W = compute_gramian(A)
+        ac = average_controllability(A)
         mc = modal_controllability(A)
         energy = min_control_energy(W, A, x0, N)   # pass A and x0
 
