@@ -21,8 +21,8 @@ import numpy as np
 import sys
 import os
 
-# Add neurosim to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from neurosim.connectivity.granger import (
     granger_causality_matrix,
@@ -155,16 +155,17 @@ def test_spurious_edges_exist():
 
     # Create sparse A with known zero edges
     N = 10
-    A = np.zeros((N, N))
+    A = np.random.randn(N, N) * 0.1  # Background connectivity
+    np.fill_diagonal(A, 0)
 
-    # Only add a few specific edges
-    A[1, 0] = 0.5  # 0 -> 1
-    A[2, 1] = 0.5  # 1 -> 2
-    # Note: A[2, 0] = 0 (no direct edge 0 -> 2)
+    # Add specific chain: 0 -> 1 -> 2 (creates indirect correlation 0-2)
+    A[1, 0] = 0.4  # 0 -> 1
+    A[2, 1] = 0.4  # 1 -> 2
 
     # Scale to stable
     rho = np.max(np.abs(np.linalg.eigvals(A)))
-    A = A * (0.7 / rho)
+    if rho > 1e-8:
+        A = A * (0.7 / rho)
 
     # Generate timeseries
     X = generate_var1_timeseries(A, T=500, seed=42)

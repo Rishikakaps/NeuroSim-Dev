@@ -43,7 +43,7 @@ from scipy.linalg import solve_discrete_lyapunov
 import warnings
 
 # Import from sibling module
-from .energy import minimum_energy
+from neurosim.control.energy import minimum_energy
 
 
 def rank_facilitator_nodes(A, top_k=10):

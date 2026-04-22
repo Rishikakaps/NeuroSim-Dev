@@ -19,8 +19,8 @@ import numpy as np
 import sys
 import os
 
-# Add neurosim to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add project root to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from neurosim.harmonization.combat import (
     estimate_combat_params,
@@ -244,7 +244,9 @@ def test_harmonization_preserves_biological_signal():
         corr_after = np.corrcoef(biological_signal[:, 0], harmonized[:, i])[0, 1]
 
         # Correlation should be maintained (not necessarily identical, but not destroyed)
-        assert corr_after > -0.5, (
+        # Strong correlation (positive or negative) means signal is preserved
+        # Check that |correlation| is maintained, not that it's positive
+        assert abs(corr_after) > 0.3, (
             f"Biological signal correlation destroyed: before={corr_before:.3f}, after={corr_after:.3f}"
         )
 
