@@ -4,7 +4,7 @@
 ![INCF](https://img.shields.io/badge/INCF-%23005596?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)
 ![Tests](https://img.shields.io/badge/tests-32%20passed-brightgreen?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
 
 **GSoC 2026 Project #39 — INCF / EBRAINS**
 *Automating In-Silico Stimulation for Non-Invasive Biomarker Discovery*
