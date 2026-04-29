@@ -201,7 +201,7 @@ neurosim/
 │   └── metrics.py          rank_facilitator_nodes(), compute_attractor_rigidity()
 ├── harmonization/
 │   └── combat.py           Blind neuroCombat (HC-only parameter estimation)
-└── src/
+└── NCT/
     └── compute_NCT.py      AC, MC, E* — Lyapunov Gramian, GRAMIAN_T=20
 
 src/
